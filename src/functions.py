@@ -1,3 +1,4 @@
+from lib2to3.pytree import Base
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from sklearn.preprocessing import OneHotEncoder
@@ -77,10 +78,11 @@ def compare_param(data,column,bins=10,figsize=(16,6)):
     """ Muestra la distribucion del parametro, el boxplot y la distribucion del parametro por clase """
     fig, axd = plt.subplot_mosaic([['left', 'right'],['bottom', 'bottom']], figsize=figsize,constrained_layout=True)
     # Upper Left
-    q25, q75 = np.percentile(data[column], [25, 75])
-    bin_width = 2 * (q75 - q25) * len(data[column]) ** (-1/3)
+    # q25, q75 = np.percentile(data[column], [25, 75])
+    # bin_width = 2 * (q75 - q25) * len(data[column]) ** (-1/3)
     mu, std = norm.fit(data[column])
-    bins = round((data[column].max() - data[column].min()) / bin_width)
+    # bins = round((data[column].max() - data[column].min()) / bin_width)
+    axd["left"].set_title(f"Distribución {column}",fontsize=32)
     axd["left"].hist(data[column], density=True,bins = bins,label=f'{column}: $\mu={np.round(mu,3)},\ \sigma={np.round(std,3)}$')
     mn, mx = axd["left"].set_xlim()
     axd["left"].set_xlim(mn, mx)
@@ -89,13 +91,17 @@ def compare_param(data,column,bins=10,figsize=(16,6)):
     axd["left"].plot(kde_xs, kde.pdf(kde_xs), label="PDF")
     axd["left"].set_ylabel("Densidad")
     # Upper Right
+    axd["left"].set_title(f"Boxplot {column}",fontsize=32)
     axd["right"].boxplot(data[column])
     # Bottom
     clases = data["Class"].drop_duplicates().to_list()
     dic = {}
     for i,name in enumerate(clases):
         dic[name] = data[data["Class"] == name][column]
-    pd.DataFrame(dic).plot(kind="kde",ax=axd["bottom"])
+    try:
+        pd.DataFrame(dic).plot(kind="kde",ax=axd["bottom"],title=f"Distribución de {column} KDE por clase")
+    except BaseException:
+        pd.DataFrame(dic).plot(kind="hist",ax=axd["bottom"],title=f"Histograma de {column} por clase")
     
 # rvs = []
 # for clase in ["NUC","CYT","MIT"]:
@@ -128,3 +134,7 @@ def get_class(sample,train,print_res=True):
         print(f"clase: {max_prob_class}, P={np.round(max_prob,5)}")
 
     return max_prob_class
+
+def get_train_set(data):
+    clases = data["Class"].drop_duplicates().to_list()
+    
