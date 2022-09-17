@@ -1,5 +1,6 @@
 from lib2to3.pytree import Base
 import matplotlib.pyplot as plt
+from matplotlib.ticker import NullFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from sklearn.preprocessing import OneHotEncoder
 from scipy.stats import norm, gaussian_kde, multivariate_normal
@@ -32,11 +33,45 @@ def pretty_hist(data,name=None,columns=None,title=None,bins=10,figsize=(16,6),pl
     if plot:
         plt.show()
 
-def pretty_hist2d(data,columns,bins=10,title=None,figsize=(16,6)):
-    plt.figure(figsize=figsize)
-    if title:
-        plt.title(title,fontsize=22)
-    plt.hist2d(data[columns[0]].to_numpy(),data[columns[1]].to_numpy(),bins=bins)
+def pretty_hist2d(data,clases,columns,bins=10,title=None,figsize=(16,6)):
+    nullfmt = NullFormatter()         # no labels
+    # definitions for the axes
+    left, width = 0.1, 0.65
+    bottom, height = 0.1, 0.65
+    bottom_h = left_h = left + width + 0.02
+
+    rect_scatter = [left, bottom, width, height]
+    rect_histx = [left, bottom_h, width, 0.2]
+    rect_histy = [left_h, bottom, 0.2, height]
+
+    # start with a rectangular Figure
+    plt.figure(1, figsize=figsize)
+
+    axScatter = plt.axes(rect_scatter)
+    axHistx = plt.axes(rect_histx)
+    axHisty = plt.axes(rect_histy)
+
+    # no labels
+    axHistx.xaxis.set_major_formatter(nullfmt)
+    axHisty.yaxis.set_major_formatter(nullfmt)
+
+    # the scatter plot:
+    for c in clases:
+        x = data[data["Class"] == c][columns[0]]
+        y = data[data["Class"] == c][columns[1]]
+        axScatter.scatter(x, y,label=c)
+
+        # now determine nice limits by hand:
+        axHistx.hist(x, bins=30,alpha=0.5)
+        axHisty.hist(y, bins=30,alpha=0.5, orientation='horizontal')
+    axScatter.set_xlim()
+    axScatter.set_ylim()
+    axScatter.set_xlabel(columns[0],fontsize=18)
+    axScatter.set_ylabel(columns[1],fontsize=18)
+    axScatter.legend()
+    axHistx.set_xlim(axScatter.get_xlim())
+    axHisty.set_ylim(axScatter.get_ylim())
+
     plt.show()
 
 def pretty_corr_matrix(data,name=None,title=None,figsize=(16,6),plot=True):
@@ -109,7 +144,7 @@ def compare_param(data,column,bins=10,figsize=(16,6)):
 
 # nn.pretty_scatter(rvs)
 
-def get_class(sample,train,print_res=True):
+def get_yeast_class(sample,train,print_res=True):
     clases = train["Class"].drop_duplicates().to_list()
     p = {}
     f = {}
