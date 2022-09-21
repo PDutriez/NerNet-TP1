@@ -143,6 +143,22 @@ def compare_param(data,column,bins=10,figsize=(16,6),kind="kde"):
 #     rvs.append([df[df["Class"] == clase].mean(numeric_only=True).to_list(),df[df["Class"] == clase].cov().to_numpy(),df[df["Class"] == clase].shape[0]])
 
 # nn.pretty_scatter(rvs)
+def pretty_param(data,column,bins=10,figsize=(16,6),kind="kde"):
+    """ Muestra la distribucion del parametro, el boxplot y la distribucion del parametro por clase """
+    fig, axd = plt.subplot_mosaic([['left', 'right']], figsize=figsize,constrained_layout=True)
+    # Upper Left
+    mu, std = norm.fit(data[column])
+    axd["left"].set_title(f"Distribución {column}",fontsize=32)
+    axd["left"].hist(data[column], density=True,bins = bins,label=f'{column}: $\mu={np.round(mu,3)},\ \sigma={np.round(std,3)}$')
+    mn, mx = axd["left"].set_xlim()
+    axd["left"].set_xlim(mn, mx)
+    kde_xs = np.linspace(mn, mx, 300)
+    kde = gaussian_kde(data[column])
+    axd["left"].plot(kde_xs, kde.pdf(kde_xs), label="PDF")
+    axd["left"].set_ylabel("Densidad")
+    # Upper Right
+    axd["left"].set_title(f"Boxplot {column}",fontsize=32)
+    axd["right"].boxplot(data[column])
 
 def get_yeast_class(sample,train,print_res=True):
     clases = train["Class"].drop_duplicates().to_list()
@@ -172,4 +188,7 @@ def get_yeast_class(sample,train,print_res=True):
 
 def get_train_set(data):
     clases = data["Class"].drop_duplicates().to_list()
-    
+
+
+def norm_data(data):
+    df["Peso_norm"] = (df["Peso"] - df["Peso"].mean())/df["Peso"].std()
