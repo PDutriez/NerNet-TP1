@@ -1,4 +1,5 @@
 from lib2to3.pytree import Base
+from random import shuffle
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -7,6 +8,11 @@ from scipy.stats import norm, gaussian_kde, multivariate_normal
 import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 import pandas as pd
+from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn import linear_model
+from sklearn.model_selection import train_test_split, learning_curve
+from sklearn.preprocessing import LabelBinarizer
 
 def pretty_class_EDA(data,name,columns,bins=10,title=None,figsize=(16,6)):
     """ Muestra la distribucion de los parametros de una clase y su correlacion """
@@ -138,11 +144,6 @@ def compare_param(data,column,bins=10,figsize=(16,6),kind="kde"):
     except BaseException:
         pd.DataFrame(dic).plot(kind="hist",ax=axd["bottom"],title=f"Histograma de {column} por clase",bins=bins)
     
-# rvs = []
-# for clase in ["NUC","CYT","MIT"]:
-#     rvs.append([df[df["Class"] == clase].mean(numeric_only=True).to_list(),df[df["Class"] == clase].cov().to_numpy(),df[df["Class"] == clase].shape[0]])
-
-# nn.pretty_scatter(rvs)
 def pretty_param(data,column,bins=10,figsize=(16,6),kind="kde"):
     """ Muestra la distribucion del parametro, el boxplot y la distribucion del parametro por clase """
     fig, axd = plt.subplot_mosaic([['left', 'right']], figsize=figsize,constrained_layout=True)
@@ -186,9 +187,138 @@ def get_yeast_class(sample,train,print_res=True):
 
     return max_prob_class
 
-def get_train_set(data):
-    clases = data["Class"].drop_duplicates().to_list()
+def test_linear_regression(data,test_size,poly_ord=1):
+    # Create linear regression object
+    regr = linear_model.LinearRegression()
+    poly = PolynomialFeatures(poly_ord,include_bias=False)
+    train_df, test_df = train_test_split(data, test_size=test_size,random_state=42)
+    x_train = train_df.drop(columns="RMSD").values
+    x_train = poly.fit_transform(x_train,)
+    x_test = test_df.drop(columns="RMSD").values
+    x_test = poly.fit_transform(x_test,)
+    y_train = train_df["RMSD"].values
+    y_test = test_df["RMSD"].values
 
+    regr.fit(x_train, y_train)
 
-def norm_data(data):
-    df["Peso_norm"] = (df["Peso"] - df["Peso"].mean())/df["Peso"].std()
+    # Make predictions using the testing set
+    y_pred = regr.predict(x_test)
+
+    return x_train, y_train, x_test, y_test, y_pred
+
+    # function for scoring roc auc score for multi-class
+def multiclass_roc_auc_score(y_test, y_pred, clases,average="macro"):
+    # Compute ROC curve and ROC area for each class
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(len(clases)):
+        fpr[i], tpr[i], _ = roc_curve(y_test[:, i], y_pred[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+        plt.plot(fpr[i],tpr[i],label="ROC curve (area = %0.2f)" % roc_auc[2],
+)
+    # lb = LabelBinarizer()
+    # lb.fit(y_test)
+    # y_test = lb.transform(y_test)
+    # y_pred = lb.transform(y_pred)
+
+    # for (idx, c_label) in enumerate(clases):
+    #     fpr, tpr, thresholds = roc_curve(y_test[:,idx], y_pred[:,idx])
+    #     plt.plot(fpr, tpr, label = '%s (AUC:%0.2f)'  % (c_label, auc(fpr, tpr)))
+    # plt.plot(fpr, fpr, 'b-', label = 'Random Guessing')
+    # plt.legend()
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
+    # plt.show()
+
+    # return roc_auc_score(y_test, y_pred, average=average)
+def show_yeast_metrics(y_test,y_pred):
+    score = accuracy_score(y_test, y_pred)
+    f1_macro = f1_score(y_test, y_pred, average='macro')
+    f1_micro = f1_score(y_test, y_pred, average='micro')
+    f1_weigt = f1_score(y_test, y_pred, average='weighted')
+    f1_noavg = f1_score(y_test, y_pred, average=None)
+    print(f"Accuracy: {np.round(score*100,3)}%")
+    print(f"F1 Macro: {np.round(f1_macro*100,3)}%")
+    print(f"F1 Micro: {np.round(f1_micro*100,3)}%")
+    print(f"F1 Class: {np.round(f1_noavg*100,3)}%")
+    return score,f1_macro,f1_micro, f1_noavg
+
+def plot_yeast_metrics(history,figsize=(12,8)):
+    plt.figure(figsize=figsize)
+    plt.subplot(131)
+    plt.plot(history.history["loss"], label="train")
+    plt.plot(history.history["val_loss"], label="val")
+    plt.ylabel("Loss",fontsize=18)
+    plt.xlabel("Epoch",fontsize=18)
+    plt.legend()
+    plt.subplot(132)
+    plt.plot(history.history["accuracy"], label="train")
+    plt.plot(history.history["val_accuracy"], label="val")
+    plt.ylabel("Accuracy",fontsize=18)
+    plt.xlabel("Epoch",fontsize=18)
+    plt.legend()
+    plt.subplot(133)
+    plt.plot(history.history["auc"], label="train")
+    plt.plot(history.history["val_auc"], label="val")
+    plt.ylabel("AUC",fontsize=18)
+    plt.xlabel("Epoch",fontsize=18)
+    plt.legend()
+    plt.show()
+
+def plot_learning_curve(
+    estimator,
+    title,
+    X,
+    y,
+    axes=None,
+    ylim=None,
+    cv=None,
+    n_jobs=None,
+    scoring=None,
+    train_sizes=np.linspace(0.1, 1.0, 5),):
+    if axes is None:
+        _, axes = plt.subplots(2, 1, figsize=(20, 8))
+
+    axes[0].set_title(title,fontsize=22)
+    if ylim is not None:
+        axes[0].set_ylim(*ylim)
+    axes[0].set_xlabel("Training examples",fontsize=12)
+    axes[0].set_ylabel("MSE",fontsize=12)
+
+    train_sizes, train_scores, test_scores, fit_times, _ = learning_curve(
+        estimator,
+        X,
+        y,
+        scoring=scoring,
+        cv=cv,
+        n_jobs=n_jobs,
+        train_sizes=train_sizes,
+        return_times=True,
+    )
+
+    train_scores_mean = np.mean(train_scores, axis=1)
+    # train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    # test_scores_std = np.std(test_scores, axis=1)
+    fit_times_mean = np.mean(fit_times, axis=1)
+    # fit_times_std = np.std(fit_times, axis=1)
+
+    # Plot learning curve
+    axes[0].grid()
+    axes[0].plot(train_sizes, -train_scores_mean, "o-", color="r", label="Training error")
+    axes[0].plot(train_sizes, -test_scores_mean, "o-", color="g", label="Test error")
+    axes[0].legend(loc="best")
+
+    # Plot fit_time vs score
+    fit_time_argsort = fit_times_mean.argsort()
+    fit_time_sorted = fit_times_mean[fit_time_argsort]
+    test_scores_mean_sorted = test_scores_mean[fit_time_argsort]
+    axes[1].grid()
+    axes[1].plot(fit_time_sorted, -test_scores_mean_sorted, "o-")
+
+    axes[1].set_xlabel("fit_times",fontsize=12)
+    axes[1].set_ylabel("MSE",fontsize=12)
+    axes[1].set_title("Performance del modelo",fontsize=22)
+
+    return plt

@@ -1,24 +1,24 @@
 # **Clasificador multiclase (LEVADURA)**
 
- - [ ] Análisis explratorio de datos (EDA)
-     - [ ] Balance de clases
-     - [ ] Correlación de a pares
-     - [ ] Histogramas por clase
+ - [x] Análisis explratorio de datos (EDA)
+     - [x] Balance de clases
+     - [x] Correlación de a pares
+     - [x] Histogramas por clase
  - [ ] micro-macro-F1
- - [ ] Resolver problema multiclase
- - [ ] Clasificación binaria
-     - [ ] Entrenar modelo y evaluar AUC - ROC
+ - [x] Resolver problema multiclase
+ - [x] Clasificación binaria
+     - [x] Entrenar modelo y evaluar AUC - ROC
 
 ## Ideas:
  - Normalizar los parámetros
 
 # **Regresión Lineal (PROTEINAS)**
 
- - [ ] Análisis explratorio de datos (EDA)
- - [ ] MSE
- - [ ] Ingenieria features
-     - [ ] Features polinomiales
- - [ ] Criterio de validación para feature polinomial.
+ - [x] Análisis explratorio de datos (EDA)
+ - [x] MSE
+ - [x] Ingenieria features
+     - [x] Features polinomiales
+     - [x] Criterio de validación para feature polinomial.
 
 ## Ideas:
  - 
